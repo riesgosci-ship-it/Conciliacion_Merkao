@@ -1,22 +1,56 @@
 import streamlit as st
-from office365.sharepoint.client_context import ClientContext
-from office365.runtime.auth.client_credential import ClientCredential
 
-# --- CONFIGURACIÓN BÁSICA ---
-st.set_page_config(page_title="Sistemas Merkao", page_icon="☁️", layout="centered")
+# --- 1. CONFIGURACIÓN BÁSICA ---
+st.set_page_config(page_title="Tesoriapp", page_icon="🏦", layout="centered")
 
-# --- OCULTAR ELEMENTOS DE STREAMLIT (UI LIMPIA MARCA BLANCA) ---
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
-            [data-testid="stToolbar"] {visibility: hidden;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# --- 2. DISEÑO UI (CSS CORPORATIVO MARCA BLANCA) ---
+st.markdown("""
+<style>
+    /* Ocultar barra superior de Streamlit, menú de GitHub y footer */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    [data-testid="stToolbar"] {visibility: hidden;}
 
-# --- LÓGICA DE MEMORIA DE SESIÓN (LOGIN SEGURO) ---
+    /* Fondo azul corporativo */
+    [data-testid="stAppViewContainer"] {
+        background-color: #1A237E; /* Tono azul oscuro elegante */
+    }
+
+    /* Color de texto blanco para los títulos y labels */
+    h1, h2, h3, p, label, .stMarkdown {
+        color: white !important;
+    }
+
+    /* Botón amarillo corporativo ocupando todo el ancho */
+    .stButton>button {
+        background-color: #FFC20E !important; /* Amarillo Merkao */
+        color: #1A237E !important; /* Texto azul */
+        font-weight: bold !important;
+        border-radius: 8px !important;
+        border: none !important;
+        width: 100% !important;
+        padding: 10px !important;
+        margin-top: 10px !important;
+    }
+    .stButton>button:hover {
+        background-color: #FFD54F !important;
+        transform: scale(1.02);
+        transition: 0.2s;
+    }
+    
+    /* Centrar textos de ayuda (Olvidaste contraseña) */
+    .centrar-texto {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 14px;
+        color: #90CAF9 !important;
+        cursor: pointer;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- 3. LÓGICA DE MEMORIA DE SESIÓN (LOGIN) ---
 if "usuario_autenticado" not in st.session_state:
     st.session_state["usuario_autenticado"] = False
 
@@ -24,81 +58,64 @@ def verificar_login():
     usu = st.session_state.usuario_input.strip()
     pwd = st.session_state.password_input
     
-    # Validar contra la Bóveda Secreta de Streamlit (No hay contraseñas en el código)
+    # Validar contra la Bóveda Secreta
     try:
         if st.secrets["passwords"].get(usu) == pwd:
             st.session_state["usuario_autenticado"] = True
         else:
-            st.error("❌ Contraseña incorrecta.")
+            st.error("❌ Contraseña o usuario incorrectos.")
     except Exception:
-        st.error("❌ Error de acceso o usuario no registrado.")
+        st.error("❌ Error conectando con la bóveda de seguridad.")
 
-# --- PANTALLA DE LOGIN ---
+# --- 4. PANTALLA DE LOGIN (TIPO BINNACLE) ---
 if not st.session_state["usuario_autenticado"]:
-    st.title("🔐 Acceso al Sistema Merkao")
-    st.write("Por favor, ingresa tus credenciales corporativas.")
     
-    st.text_input("Usuario (Ej. NOMBRE.APELLIDO)", key="usuario_input")
-    st.text_input("Contraseña", type="password", key="password_input")
+    # Usar columnas para centrar y simular una "tarjeta" más angosta
+    col1, col2, col3 = st.columns([1, 2, 1])
     
-    st.button("Ingresar al Sistema", on_click=verificar_login, type="primary")
-
-# --- PANTALLA PRINCIPAL DE LA APLICACIÓN (OCULTA) ---
-else:
-    # Botón para cerrar sesión
-    col1, col2 = st.columns([0.8, 0.2])
-    with col1:
-        st.title("☁️ Test de Conexión SharePoint")
     with col2:
+        st.write("<br><br>", unsafe_allow_html=True) # Espacio superior
+        
+        # Intentar cargar el logo (debes subir un archivo 'logo_merkao.png' a GitHub)
+        try:
+            st.image("logo_merkao.png", use_container_width=True)
+        except:
+            st.markdown("<h1 style='text-align: center;'>Tesoriapp</h1>", unsafe_allow_html=True)
+        
+        st.write("<br>", unsafe_allow_html=True)
+        
+        # Formulario
+        st.text_input("Usuario", placeholder="Ej. NOMBRE.APELLIDO", key="usuario_input")
+        st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña", key="password_input")
+        
+        st.button("Iniciar Sesión", on_click=verificar_login)
+        
+        # Enlaces inferiores solicitados
+        st.markdown("<p class='centrar-texto'>¿Olvidaste tu contraseña?</p>", unsafe_allow_html=True)
+        st.checkbox("Recuérdame en este dispositivo")
+
+# --- 5. PANTALLA PRINCIPAL (MOTOR CONTABLE - OCULTO HASTA EL LOGIN) ---
+else:
+    # Header de la aplicación ya logueada
+    c_logo, c_titulo, c_logout = st.columns([1, 3, 1])
+    with c_titulo:
+        st.markdown("<h2>Módulo de Conciliación</h2>", unsafe_allow_html=True)
+    with c_logout:
         st.button("Cerrar Sesión", on_click=lambda: st.session_state.update(usuario_autenticado=False))
         
-    st.write("Validador de credenciales de aplicación para migración web.")
     st.markdown("---")
-
-    # --- FORMULARIO DE CREDENCIALES SHAREPOINT ---
-    url_sitio = st.text_input(
-        "URL del sitio de SharePoint", 
-        value="https://intercorpretail.sharepoint.com/sites/ConciliacinTesoreraMerkao"
-    )
-
-    client_id = st.text_input("Client ID", type="password")
-    client_secret = st.text_input("Client Secret", type="password")
-
+    
+    # Aquí es donde vivirá la lógica de Pandas. 
+    # Ya no usaremos Tkinter, usaremos zonas de "Arrastrar y Soltar"
+    st.write("### 📁 Carga de Archivos Maestros")
+    
+    col_izq, col_der = st.columns(2)
+    with col_izq:
+        file_jsat = st.file_uploader("📥 Subir Ventas (JSatellite)", type=['xlsx', 'csv'])
+        file_mon = st.file_uploader("📥 Subir Pedidos (Monitor)", type=['xlsx', 'csv'])
+    with col_der:
+        file_liq = st.file_uploader("📥 Subir Entregas (Liquidador)", type=['xlsx', 'csv'])
+        file_izi = st.file_uploader("📥 Subir IziPay", type=['xlsx', 'csv'])
+    
     st.markdown("---")
-
-    if st.button("🚀 Probar Conexión", type="primary"):
-        if not url_sitio or not client_id or not client_secret:
-            st.warning("⚠️ Por favor, completa tu Client ID y Client Secret primero.")
-        else:
-            try:
-                with st.spinner("Autenticando de forma segura con Microsoft Azure..."):
-                    credenciales = ClientCredential(client_id, client_secret)
-                    ctx = ClientContext(url_sitio).with_credentials(credenciales)
-                    
-                    web = ctx.web
-                    ctx.load(web)
-                    ctx.execute_query()
-                    
-                    st.success("✅ ¡Conexión Exitosa con Intercorp Retail!")
-                    st.info(f"El script logró entrar como administrador al sitio: **{web.properties['Title']}**")
-                    
-                    listas = ctx.web.lists
-                    ctx.load(listas)
-                    ctx.execute_query()
-                    
-                    st.write("### 📁 Listas y Carpetas detectadas en el servidor:")
-                    encontrado = False
-                    for lista in listas:
-                        titulo_lista = lista.properties['Title']
-                        if "Satelite" in titulo_lista or "Satelite" in titulo_lista.lower() or titulo_lista == "Maestro_JSatelite":
-                            st.write(f"- 🟢 **{titulo_lista}** (¡Lista detectada correctamente!)")
-                            encontrado = True
-                        else:
-                            st.write(f"- ⚪ {titulo_lista}")
-                    
-                    if not encontrado:
-                        st.warning("Pude entrar al sitio, pero no logré visualizar la lista 'Maestro_JSatelite'. Revisa si la lista tiene permisos heredados del sitio.")
-                        
-            except Exception as e:
-                st.error("❌ Falló la conexión. Verifica que el Client ID y el Secret estén vigentes y tengan permisos para este sitio.")
-                st.code(str(e))
+    st.write("*(El motor de cruce de Pandas se conectará aquí en el siguiente paso)*")
