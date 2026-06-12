@@ -65,6 +65,7 @@ st.markdown("""
         box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1) !important;
     }
 
+    /* CSS de Streamlit para botones (en HTML sí usan kind) */
     .stButton>button[kind="primary"] {
         background-color: #FFC20E !important; 
         color: #1A237E !important; 
@@ -167,7 +168,9 @@ def enviar_correo_recuperacion(destinatario):
         
         return True, f"✅ Se ha enviado un correo con instrucciones a {destinatario}."
     except smtplib.SMTPAuthenticationError:
-        return False, "❌ Autenticación fallida: Microsoft bloqueó el acceso. Pide a TI una 'Contraseña de Aplicación' para saltar el MFA."
+        return False, "❌ Autenticación fallida: Microsoft bloqueó el acceso. Verifica la 'Contraseña de Aplicación' en la bóveda de Streamlit."
+    except KeyError:
+         return False, "❌ La bóveda de seguridad [email] no está configurada correctamente en Streamlit."
     except Exception as e:
         return False, f"❌ Error del sistema de correo: {str(e)}"
 
@@ -178,15 +181,20 @@ if not st.session_state["usuario_autenticado"]:
     
     with card_col:
         st.write("<br><br>", unsafe_allow_html=True) 
-        st.image("logo_merkao.png", width=130)
         
+        try:
+            st.image("logo_merkao.png", width=130)
+        except:
+            st.markdown("<h1 class='titulo-elegante'>Tesoriapp</h1>", unsafe_allow_html=True)
+            
         # === VISTA 1: INICIO DE SESIÓN ===
         if st.session_state["vista_actual"] == "login":
             st.text_input("Usuario", placeholder="NOMBRE.APELLIDO", key="usuario_input")
             st.text_input("Contraseña", type="password", placeholder="••••••••", key="password_input")
             
             st.markdown("<div class='boton-olvido'>", unsafe_allow_html=True)
-            if st.button("¿Olvidaste tu contraseña?", kind="secondary", key="btn_ir_recuperar"):
+            # CORRECCIÓN: Aquí es type="secondary" en vez de kind="secondary"
+            if st.button("¿Olvidaste tu contraseña?", type="secondary", key="btn_ir_recuperar"):
                 st.session_state["vista_actual"] = "recuperar"
                 st.rerun() 
             st.markdown("</div>", unsafe_allow_html=True)
@@ -206,10 +214,13 @@ if not st.session_state["usuario_autenticado"]:
                         if "error_login" in st.session_state: del st.session_state["error_login"]
                     else:
                         st.session_state["error_login"] = "❌ Usuario o contraseña incorrectos."
-                except Exception:
-                    st.session_state["error_login"] = "❌ Error crítico: La bóveda de seguridad no está configurada."
+                except KeyError:
+                    st.session_state["error_login"] = "❌ Error crítico: La bóveda secreta [passwords] no está configurada en Streamlit."
+                except Exception as e:
+                    st.session_state["error_login"] = f"❌ Error: {e}"
 
-            st.button("Iniciar Sesión", on_click=verificar_login, kind="primary")
+            # CORRECCIÓN: Aquí es type="primary"
+            st.button("Iniciar Sesión", on_click=verificar_login, type="primary")
             
         # === VISTA 2: RECUPERAR ACCESO ===
         elif st.session_state["vista_actual"] == "recuperar":
@@ -219,7 +230,8 @@ if not st.session_state["usuario_autenticado"]:
             
             st.text_input("Correo Electrónico", placeholder="ejemplo@spsa.pe", key="correo_recuperar_input")
             
-            if st.button("Volver al Login", kind="secondary", key="btn_volver_login"):
+            # CORRECCIÓN: Aquí es type="secondary"
+            if st.button("Volver al Login", type="secondary", key="btn_volver_login"):
                 st.session_state["vista_actual"] = "login"
                 if "pwd_recuperada_msg" in st.session_state: del st.session_state["pwd_recuperada_msg"]
                 st.rerun()
@@ -233,13 +245,14 @@ if not st.session_state["usuario_autenticado"]:
             def intentar_recuperacion():
                 correo = st.session_state.correo_recuperar_input.strip()
                 if not correo or "@" not in correo:
-                    st.session_state["pwd_recuperada_msg"] = "⚠️ Ingresa un correo válido."
+                    st.session_state["pwd_recuperada_msg"] = "⚠️ Ingresa un correo corporativo válido."
                 else:
                     # Llamamos a la función real de envío de correos
                     exito, mensaje = enviar_correo_recuperacion(correo)
                     st.session_state["pwd_recuperada_msg"] = mensaje
             
-            st.button("Enviar Instrucciones", on_click=intentar_recuperacion, kind="primary")
+            # CORRECCIÓN: Aquí es type="primary"
+            st.button("Enviar Instrucciones", on_click=intentar_recuperacion, type="primary")
 
 # === 5. PANTALLA PRINCIPAL (MOTOR CONTABLE - OCULTO) ===
 else:
@@ -280,4 +293,5 @@ else:
         file_bbr = st.file_uploader("BBR", type=['xlsx', 'csv'])
     
     st.markdown("---")
+    # CORRECCIÓN: Aquí es type="primary"
     st.button("▶️ INICIAR CONCILIACIÓN", type="primary", key="btn_procesar_web")
