@@ -5,20 +5,33 @@ from office365.runtime.auth.client_credential import ClientCredential
 # --- CONFIGURACIÓN BÁSICA ---
 st.set_page_config(page_title="Sistemas Merkao", page_icon="☁️", layout="centered")
 
-# --- LÓGICA DE MEMORIA DE SESIÓN (LOGIN) ---
+# --- OCULTAR ELEMENTOS DE STREAMLIT (UI LIMPIA MARCA BLANCA) ---
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            header {visibility: hidden;}
+            footer {visibility: hidden;}
+            [data-testid="stToolbar"] {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# --- LÓGICA DE MEMORIA DE SESIÓN (LOGIN SEGURO) ---
 if "usuario_autenticado" not in st.session_state:
     st.session_state["usuario_autenticado"] = False
 
 def verificar_login():
-    usu = st.session_state.usuario_input
+    usu = st.session_state.usuario_input.strip()
     pwd = st.session_state.password_input
     
-    # Validación estricta de usuarios
-    if (usu == "MAYHELA.SIMON" and pwd == "Spsa2026") or \
-       (usu == "CESAR.ROMERO" and pwd == "Spsa2026"):
-        st.session_state["usuario_autenticado"] = True
-    else:
-        st.error("❌ Usuario o contraseña incorrectos.")
+    # Validar contra la Bóveda Secreta de Streamlit (No hay contraseñas en el código)
+    try:
+        if st.secrets["passwords"].get(usu) == pwd:
+            st.session_state["usuario_autenticado"] = True
+        else:
+            st.error("❌ Contraseña incorrecta.")
+    except Exception:
+        st.error("❌ Error de acceso o usuario no registrado.")
 
 # --- PANTALLA DE LOGIN ---
 if not st.session_state["usuario_autenticado"]:
