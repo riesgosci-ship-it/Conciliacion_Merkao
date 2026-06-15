@@ -1,5 +1,7 @@
 import streamlit as st
 import smtplib
+import base64
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from office365.sharepoint.client_context import ClientContext
@@ -7,6 +9,14 @@ from office365.runtime.auth.client_credential import ClientCredential
 
 # --- 1. CONFIGURACIÓN BÁSICA ---
 st.set_page_config(page_title="Tesoriapp - Acceso", page_icon="🏦", layout="centered")
+
+# --- FUNCION PARA LEER IMAGEN LOCAL ---
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception:
+        return ""
 
 # --- 2. DISEÑO UI AVANZADO (CSS UX/UI PROFESIONAL - TESORIAPP STYLE) ---
 st.markdown("""
@@ -18,6 +28,7 @@ st.markdown("""
     
     .st-emotion-cache-1r6slb0 { padding: 0 !important; }
 
+    /* Fondo degradado */
     [data-testid="stAppViewContainer"] {
         background: radial-gradient(circle, #283593 0%, #1A237E 70%, #121858 100%);
         display: flex;
@@ -26,102 +37,109 @@ st.markdown("""
     }
     [data-testid="stHeader"] { background-color: rgba(0,0,0,0); }
 
+    /* Tarjeta Blanca */
     div[data-testid="stColumn"]:nth-of-type(2) > div {
         background-color: white;
-        border-radius: 20px; 
-        padding: 60px 50px; 
-        box-shadow: 0 15px 35px rgba(0,0,0,0.4); 
+        border-radius: 24px; 
+        padding: 50px 50px 40px 50px; 
+        box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
         border: 1px solid #EAEAEA;
-        max-width: 450px; 
+        max-width: 420px; 
         margin: auto; 
     }
 
+    /* Textos generales */
     div[data-testid="stColumn"]:nth-of-type(2) label, 
-    div[data-testid="stColumn"]:nth-of-type(2) p, 
-    div[data-testid="stColumn"]:nth-of-type(2) h1, 
-    div[data-testid="stColumn"]:nth-of-type(2) h2, 
-    div[data-testid="stColumn"]:nth-of-type(2) h3 {
-        color: #1E293B !important; 
+    div[data-testid="stColumn"]:nth-of-type(2) p {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        text-align: left;
     }
     
-    .titulo-recuperar {
-        text-align: center !important;
-        margin-bottom: 25px;
-        color: #1A237E !important;
+    /* Estilo de los Inputs (Cajas de texto más bonitas) */
+    .stTextInput label p {
+        font-size: 13.5px !important;
+        color: #64748B !important;
+        font-weight: 600 !important;
+        margin-bottom: 2px !important;
     }
-    
     .stTextInput>div>div>input {
-        background-color: #FBFDFF !important;
-        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        border: 1.5px solid #CBD5E1 !important;
         color: #1E293B !important;
-        border-radius: 10px !important;
-        padding: 12px 18px !important;
+        border-radius: 8px !important;
+        padding: 14px 16px !important;
         font-size: 15px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.02) !important;
+        transition: all 0.2s ease;
     }
     .stTextInput>div>div>input:focus {
         border-color: #1A237E !important;
-        box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1) !important;
+        box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.15) !important;
     }
 
-    /* CSS de Streamlit para botones (en HTML sí usan kind) */
-    .stButton>button[kind="primary"] {
+    /* Botón Principal Amarillo - Centrado y ajustado */
+    .stButton {
+        display: flex;
+        justify-content: center; /* Fuerza el centrado del botón */
+        width: 100%;
+        margin-top: 10px;
+    }
+    .stButton>button[type="primary"] {
         background-color: #FFC20E !important; 
         color: #1A237E !important; 
         font-weight: 800 !important;
-        font-size: 16px !important;
-        border-radius: 10px !important;
+        font-size: 15px !important;
+        border-radius: 25px !important; /* Forma tipo píldora */
         border: none !important;
-        width: 100% !important; 
-        padding: 14px !important;
-        margin-top: 30px !important;
-        box-shadow: 0 5px 10px rgba(0,0,0,0.15) !important;
+        width: 85% !important; /* No ocupa todo el ancho, se ve más elegante */
+        padding: 12px !important;
+        box-shadow: 0 6px 12px rgba(255, 194, 14, 0.2) !important;
         transition: all 0.3s ease !important;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
     }
-    .stButton>button[kind="primary"]:hover {
+    .stButton>button[type="primary"]:hover {
         background-color: #FFD54F !important; 
-        transform: translateY(-3px); 
-        box-shadow: 0 8px 15px rgba(0,0,0,0.2) !important;
+        transform: translateY(-2px); 
+        box-shadow: 0 8px 15px rgba(255, 194, 14, 0.4) !important;
     }
 
-    .stButton>button[kind="secondary"] {
+    /* Enlace Olvidaste tu contraseña - Centrado */
+    .boton-olvido {
+        display: flex;
+        justify-content: center !important;
+        margin-top: 5px; 
+        margin-bottom: 10px;
+    }
+    .stButton>button[type="secondary"] {
         background-color: transparent !important;
-        color: #475569 !important; 
+        color: #64748B !important; 
         border: none !important;
         font-weight: 500 !important;
-        font-size: 14px !important;
+        font-size: 13.5px !important;
         padding: 0 !important;
-        margin-top: 5px !important;
         transition: color 0.3s ease;
     }
-    .stButton>button[kind="secondary"]:hover {
+    .stButton>button[type="secondary"]:hover {
         color: #1A237E !important; 
         text-decoration: underline !important;
     }
-    
-    .boton-olvido {
-        text-align: right !important;
+
+    /* Checkbox Recordar - Centrado */
+    [data-testid="stCheckbox"] {
         display: flex;
-        justify-content: flex-end;
-        margin-top: -15px; 
-        margin-bottom: 20px;
+        justify-content: center; /* Centra el checkbox */
+        margin-bottom: 15px;
     }
-
     .stCheckbox label {
-        font-size: 14px !important;
+        font-size: 13.5px !important;
         color: #64748B !important;
-        margin-top: 10px;
     }
 
-    .titulo-elegante {
-        text-align: center;
+    /* Título de Recuperar centrado */
+    .titulo-recuperar {
+        text-align: center !important;
+        margin-bottom: 20px;
         color: #1A237E !important;
         font-weight: 800;
-        font-size: 36px;
-        margin-bottom: 25px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -159,7 +177,6 @@ def enviar_correo_recuperacion(destinatario):
         """
         msg.attach(MIMEText(cuerpo_html, 'html'))
         
-        # Conexión al servidor SMTP de Microsoft
         server = smtplib.SMTP('smtp.office365.com', 587)
         server.starttls()
         server.login(remitente, password)
@@ -168,7 +185,7 @@ def enviar_correo_recuperacion(destinatario):
         
         return True, f"✅ Se ha enviado un correo con instrucciones a {destinatario}."
     except smtplib.SMTPAuthenticationError:
-        return False, "❌ Autenticación fallida: Microsoft bloqueó el acceso. Verifica la 'Contraseña de Aplicación' en la bóveda de Streamlit."
+        return False, "❌ Autenticación fallida: Microsoft bloqueó el acceso. Verifica la 'Contraseña de Aplicación' en la bóveda."
     except KeyError:
          return False, "❌ La bóveda de seguridad [email] no está configurada correctamente en Streamlit."
     except Exception as e:
@@ -180,20 +197,28 @@ if not st.session_state["usuario_autenticado"]:
     c1, card_col, c3 = st.columns([1, 3, 1])
     
     with card_col:
-        st.write("<br><br>", unsafe_allow_html=True) 
+        st.write("<br>", unsafe_allow_html=True) 
         
-        try:
-            st.image("logo_merkao.png", width=130)
-        except:
-            st.markdown("<h1 class='titulo-elegante'>Tesoriapp</h1>", unsafe_allow_html=True)
-            
         # === VISTA 1: INICIO DE SESIÓN ===
         if st.session_state["vista_actual"] == "login":
-            st.text_input("Usuario", placeholder="NOMBRE.APELLIDO", key="usuario_input")
+            
+            # --- Renderizar Logo y Título centrados horizontalmente ---
+            img_b64 = get_base64_image("logo_merkao.png")
+            if img_b64:
+                st.markdown(f"""
+                    <div style='display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 30px;'>
+                        <img src='data:image/png;base64,{img_b64}' style='width: 75px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                        <h1 style='color: #1A237E; margin: 0; padding: 0; font-size: 34px; font-weight: 800; letter-spacing: -1px;'>Tesoriapp</h1>
+                    </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("<h1 style='text-align: center; color: #1A237E; font-weight: 800; font-size: 36px; margin-bottom: 30px;'>Tesoriapp</h1>", unsafe_allow_html=True)
+            
+            # --- Formulario ---
+            st.text_input("Usuario", placeholder="ej. MAYHELA.SIMON", key="usuario_input")
             st.text_input("Contraseña", type="password", placeholder="••••••••", key="password_input")
             
             st.markdown("<div class='boton-olvido'>", unsafe_allow_html=True)
-            # CORRECCIÓN: Aquí es type="secondary" en vez de kind="secondary"
             if st.button("¿Olvidaste tu contraseña?", type="secondary", key="btn_ir_recuperar"):
                 st.session_state["vista_actual"] = "recuperar"
                 st.rerun() 
@@ -215,26 +240,31 @@ if not st.session_state["usuario_autenticado"]:
                     else:
                         st.session_state["error_login"] = "❌ Usuario o contraseña incorrectos."
                 except KeyError:
-                    st.session_state["error_login"] = "❌ Error crítico: La bóveda secreta [passwords] no está configurada en Streamlit."
+                    st.session_state["error_login"] = "❌ Error crítico: La bóveda secreta no está configurada."
                 except Exception as e:
                     st.session_state["error_login"] = f"❌ Error: {e}"
 
-            # CORRECCIÓN: Aquí es type="primary"
-            st.button("Iniciar Sesión", on_click=verificar_login, type="primary")
+            st.button("INICIAR SESIÓN", on_click=verificar_login, type="primary")
             
         # === VISTA 2: RECUPERAR ACCESO ===
         elif st.session_state["vista_actual"] == "recuperar":
             
-            st.markdown("<h3 class='titulo-recuperar'>Recuperar Acceso</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='font-size: 14px; color: #475569 !important; margin-bottom: 20px;'>Escribe tu correo corporativo y te enviaremos las instrucciones de acceso.</p>", unsafe_allow_html=True)
+            # Renderizar solo el logo centrado
+            img_b64 = get_base64_image("logo_merkao.png")
+            if img_b64:
+                st.markdown(f"<div style='text-align: center; margin-bottom: 20px;'><img src='data:image/png;base64,{img_b64}' style='width: 80px; border-radius: 12px;'></div>", unsafe_allow_html=True)
+                
+            st.markdown("<h3 class='titulo-recuperar'>¿Olvidaste tu contraseña?</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 14px; text-align: center; color: #475569 !important; margin-bottom: 20px;'>Escribe tu correo corporativo para recibir las instrucciones de acceso.</p>", unsafe_allow_html=True)
             
-            st.text_input("Correo Electrónico", placeholder="ejemplo@spsa.pe", key="correo_recuperar_input")
+            st.text_input("Correo corporativo", placeholder="ejemplo@spsa.pe", key="correo_recuperar_input")
             
-            # CORRECCIÓN: Aquí es type="secondary"
-            if st.button("Volver al Login", type="secondary", key="btn_volver_login"):
+            st.markdown("<div class='boton-olvido'>", unsafe_allow_html=True)
+            if st.button("Cancelar y Volver", type="secondary", key="btn_volver_login"):
                 st.session_state["vista_actual"] = "login"
                 if "pwd_recuperada_msg" in st.session_state: del st.session_state["pwd_recuperada_msg"]
                 st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
                 
             if "pwd_recuperada_msg" in st.session_state:
                 if "❌" in st.session_state["pwd_recuperada_msg"]:
@@ -247,12 +277,10 @@ if not st.session_state["usuario_autenticado"]:
                 if not correo or "@" not in correo:
                     st.session_state["pwd_recuperada_msg"] = "⚠️ Ingresa un correo corporativo válido."
                 else:
-                    # Llamamos a la función real de envío de correos
                     exito, mensaje = enviar_correo_recuperacion(correo)
                     st.session_state["pwd_recuperada_msg"] = mensaje
             
-            # CORRECCIÓN: Aquí es type="primary"
-            st.button("Enviar Instrucciones", on_click=intentar_recuperacion, type="primary")
+            st.button("ENVIAR INSTRUCCIONES", on_click=intentar_recuperacion, type="primary")
 
 # === 5. PANTALLA PRINCIPAL (MOTOR CONTABLE - OCULTO) ===
 else:
@@ -293,5 +321,4 @@ else:
         file_bbr = st.file_uploader("BBR", type=['xlsx', 'csv'])
     
     st.markdown("---")
-    # CORRECCIÓN: Aquí es type="primary"
     st.button("▶️ INICIAR CONCILIACIÓN", type="primary", key="btn_procesar_web")
